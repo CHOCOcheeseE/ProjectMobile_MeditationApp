@@ -173,17 +173,18 @@ const MeditateScreen: React.FC<MeditateStackScreenProps<'MeditateList'>> = ({
           />
         </View>
 
-        {/* ... (Daily Calm Card) ... */}
+        {/* Daily Calm Card */}
         <PlayerCard
           title={meditateData.dailyCalm.title}
           subtitle={meditateData.dailyCalm.subtitle}
           imageSource={meditateData.dailyCalm.image}
           onPress={() => onTopicPress(meditateData.dailyCalm)}
+          delay={100}
         />
 
-        {/* ... (Meditation Topics List) ... */}
+        {/* Meditation Topics List */}
         <FlatList
-          data={filteredTopics} // (FIX) Menggunakan data yang sudah difilter
+          data={filteredTopics}
           keyExtractor={item => item.id}
           numColumns={2}
           showsVerticalScrollIndicator={false}
@@ -193,11 +194,12 @@ const MeditateScreen: React.FC<MeditateStackScreenProps<'MeditateList'>> = ({
               Meditation
             </Text>
           }
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <MeditationCard
               title={item.title}
               imageSource={item.image}
               onPress={() => onTopicPress(item)}
+              index={index}
             />
           )}
         />

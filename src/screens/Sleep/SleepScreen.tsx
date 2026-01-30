@@ -108,7 +108,6 @@ const SleepScreen: React.FC<SleepStackScreenProps<'SleepList'>> = ({
   // Komponen Header untuk FlatList
   const renderHeader = () => (
     <>
-      {/* (UPDATE) Ganti nama Sesuai Figma */}
       <Text style={[styles.title, { color: theme.text }]}>Sleep Music</Text>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
         Soothing bedtime music to help you fall into a deep and natural
@@ -125,14 +124,15 @@ const SleepScreen: React.FC<SleepStackScreenProps<'SleepList'>> = ({
     </>
   );
 
-  // Fungsi render untuk grid
-  const renderSleepTopic = ({ item }: { item: SleepTopic }) => {
+  // Fungsi render untuk grid dengan index untuk animasi
+  const renderSleepTopic = ({ item, index }: { item: SleepTopic; index: number }) => {
     return (
       <SleepCard
         title={item.title}
         subtitle={item.subtitle}
         imageSource={item.image}
         onPress={() => onTopicPress(item)}
+        index={index}
       />
     );
   };

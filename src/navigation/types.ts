@@ -22,6 +22,7 @@ export type AuthStackParamList = {
   SplashOnboard: undefined;
   SignIn: undefined;
   SignUp: undefined;
+  ForgotPassword: undefined;
   Welcome: undefined;
   ChooseTopic: undefined;
 };
@@ -72,6 +73,7 @@ export type SplashOnboardProps = NativeStackScreenProps<
 >;
 export type SignInProps = NativeStackScreenProps<AuthStackParamList, 'SignIn'>;
 export type SignUpProps = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
+export type ForgotPasswordProps = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 export type WelcomeProps = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
 export type ChooseTopicProps = NativeStackScreenProps<
   AuthStackParamList,

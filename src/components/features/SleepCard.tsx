@@ -1,126 +1,216 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  Image,
   TouchableOpacity,
-  ImageBackground,
   ImageSourcePropType,
-  Dimensions,
 } from 'react-native';
-import { METRICS } from '../../constants/metrics';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withDelay,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { METRICS } from '../../constants/metrics';
 
-// (Poin 7) Tipe untuk props
-type Props = {
+interface SleepCardProps {
   title: string;
   subtitle: string;
-  imageSource: ImageSourcePropType;
+  imageSource: ImageSourcePropType | { uri: string };
+  isHero?: boolean;
   onPress: () => void;
-  isHero?: boolean; // Style khusus untuk kartu besar
-};
+  index?: number;
+}
 
-const { width } = Dimensions.get('window');
-// (lebar layar - (padding horizontal * 2) - (jarak antar kartu)) / 2
-const cardWidth = (width - METRICS.padding * 2 - METRICS.margin) / 2;
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-const SleepCard: React.FC<Props> = ({
+const SleepCard: React.FC<SleepCardProps> = ({
   title,
   subtitle,
   imageSource,
+  isHero,
   onPress,
-  isHero = false,
+  index = 0,
 }) => {
-  const { theme } = useTheme(); // (Poin 4)
+  const { theme } = useTheme();
 
-  // (Poin 2) Tentukan style dinamis
-  const containerStyle = isHero
-    ? styles.heroContainer
-    : [styles.cardContainer, { width: cardWidth }];
+  // Animasi nilai
+  const animationProgress = useSharedValue(0);
 
-  const titleStyle = isHero ? styles.heroTitle : styles.cardTitle;
-  const subtitleStyle = isHero ? styles.heroSubtitle : styles.cardSubtitle;
+  useEffect(() => {
+    const delay = isHero ? 0 : index * 80;
+    animationProgress.value = withDelay(
+      delay,
+      withSpring(1, { damping: 14, stiffness: 85 })
+    );
+  }, [index, isHero]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      animationProgress.value,
+      [0, 1],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          animationProgress.value,
+          [0, 1],
+          [isHero ? 15 : 25, 0],
+          Extrapolation.CLAMP
+        ),
+      },
+      {
+        scale: interpolate(
+          animationProgress.value,
+          [0, 1],
+          [0.95, 1],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
+
+  if (isHero) {
+    return (
+      <AnimatedTouchable
+        style={[styles.heroContainer, animatedStyle]}
+        onPress={onPress}
+        activeOpacity={0.9}
+      >
+        <Image
+          source={imageSource}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <View style={styles.heroOverlay}>
+          <View style={styles.heroTextContainer}>
+            <Text style={styles.heroTitle}>{title}</Text>
+            <Text style={styles.heroSubtitle}>{subtitle}</Text>
+          </View>
+          <View style={styles.heroPlayButton}>
+            <Ionicons name="play" size={20} color="#1A2850" />
+          </View>
+        </View>
+      </AnimatedTouchable>
+    );
+  }
 
   return (
-    <TouchableOpacity style={[containerStyle]} onPress={onPress}>
-      <ImageBackground
-        source={imageSource}
-        style={styles.imageBackground}
-        imageStyle={styles.imageStyle}>
-        <View style={styles.textContainer}>
-          <Text style={[titleStyle, { color: theme.text }]}>{title}</Text>
-          <Text style={[subtitleStyle, { color: theme.textSecondary }]}>
-            {subtitle}
-          </Text>
-        </View>
-
-        {/* Tampilkan tombol START hanya di kartu hero */}
-        {isHero && (
-          <TouchableOpacity
-            style={[styles.playButton, { backgroundColor: theme.white }]}>
-            <Text style={[styles.playButtonText, { color: theme.darkGrey }]}>
-              START
-            </Text>
-          </TouchableOpacity>
-        )}
-      </ImageBackground>
-    </TouchableOpacity>
+    <AnimatedTouchable
+      style={[styles.container, animatedStyle]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={styles.imageWrapper}>
+        <Image
+          source={imageSource}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        <View style={styles.imageOverlay} />
+      </View>
+      <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+        {subtitle}
+      </Text>
+    </AnimatedTouchable>
   );
 };
 
 const styles = StyleSheet.create({
-  // Style untuk kartu hero (besar)
+  container: {
+    width: '48%',
+    marginBottom: METRICS.margin + 4,
+  },
+  imageWrapper: {
+    borderRadius: METRICS.radius + 4,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  image: {
+    width: '100%',
+    height: 130,
+    backgroundColor: '#1A2850',
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(139, 147, 255, 0.08)',
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 3,
+    letterSpacing: 0.2,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+  // Hero Card Styles
   heroContainer: {
     width: '100%',
-    height: 210, // Kartu besar
-    borderRadius: METRICS.radius,
+    height: 200,
+    borderRadius: METRICS.radius + 6,
+    marginBottom: METRICS.margin + 4,
     overflow: 'hidden',
-    marginBottom: METRICS.margin,
+    // Shadow premium
+    shadowColor: 'rgba(139, 147, 255, 0.4)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  // Style untuk kartu grid (kecil)
-  cardContainer: {
-    height: 180, // Kartu kecil
-    borderRadius: METRICS.radius,
-    overflow: 'hidden',
-    marginBottom: METRICS.margin,
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
-  imageBackground: {
-    flex: 1,
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: METRICS.padding + 2,
+    paddingBottom: METRICS.padding,
+    backgroundColor: 'rgba(13, 27, 61, 0.75)',
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: METRICS.padding / 1.5,
   },
-  imageStyle: {
-    borderRadius: METRICS.radius,
-    opacity: 0.7,
-  },
-  textContainer: {
-    // Kontainer untuk teks di bagian atas
+  heroTextContainer: {
+    flex: 1,
   },
   heroTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
   heroSubtitle: {
     fontSize: 14,
-    marginTop: 5,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
-  cardSubtitle: {
-    fontSize: 12,
-    marginTop: 3,
-  },
-  playButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignSelf: 'flex-start', // Posisikan di kiri bawah
-  },
-  playButtonText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  heroPlayButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#8B93FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
   },
 });
 

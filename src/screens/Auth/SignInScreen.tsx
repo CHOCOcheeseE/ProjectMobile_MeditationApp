@@ -24,10 +24,9 @@ import CustomTextInput from '../../components/common/CustomTextInput';
 
 const SignInScreen: React.FC<SignInProps> = ({ navigation }) => {
   const { theme } = useTheme();
-  // (FIX) Ambil isLoading dan error dari context
-  const { signIn, isLoading, error } = useAuth();
-  const [email, setEmail] = useState('eve.holt@reqres.in'); // (FIX) Contoh email (UPDATE: Sesuai petunjuk API)
-  const [password, setPassword] = useState('pistol'); // (FIX) Contoh password (UPDATE: Sesuai petunjuk API)
+  const { signIn, signInWithGoogle, isLoading, error, clearError } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
   const onLogin = async () => {
@@ -38,6 +37,15 @@ const SignInScreen: React.FC<SignInProps> = ({ navigation }) => {
       await signIn(email, password);
     } catch (e: any) {
       // Tangkap error jika login gagal
+      setLocalError(e.message);
+    }
+  };
+
+  const onGoogleLogin = async () => {
+    setLocalError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
       setLocalError(e.message);
     }
   };
@@ -53,18 +61,13 @@ const SignInScreen: React.FC<SignInProps> = ({ navigation }) => {
 
         <Text style={[styles.title, { color: theme.text }]}>Welcome Back!</Text>
 
-        {/* Tombol Sosial */}
-        <CustomButton
-          title="CONTINUE WITH FACEBOOK"
-          onPress={() => {}}
-          variant="social"
-          iconName="logo-facebook"
-        />
+        {/* Tombol Google */}
         <CustomButton
           title="CONTINUE WITH GOOGLE"
-          onPress={() => {}}
+          onPress={onGoogleLogin}
           variant="social"
           iconName="logo-google"
+          disabled={isLoading}
         />
 
         <Text style={[styles.dividerText, { color: theme.textSecondary }]}>
@@ -100,7 +103,7 @@ const SignInScreen: React.FC<SignInProps> = ({ navigation }) => {
           disabled={isLoading} // (FIX) Disable tombol saat loading
         />
 
-        <TouchableOpacity onPress={() => {}}>
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={[styles.forgotText, { color: theme.text }]}>
             Forgot Password?
           </Text>

@@ -12,14 +12,11 @@ import { useTheme } from '../../context/ThemeContext';
 import { METRICS } from '../../constants/metrics';
 import TopicCard from '../../components/features/TopicCard';
 import { ChooseTopicProps } from '../../navigation/types';
-import { useAuth } from '../../context/AuthContext'; // (FIX) Jalur impor yang benar
-import { fetchTopicsData } from '../../services/api'; // (FIX) Impor API
-import { Topic } from '../../data/MockData'; // (FIX) Impor Tipe
+import { fetchTopicsData } from '../../services/api';
+import { Topic } from '../../data/MockData';
 
-const ChooseTopicScreen: React.FC<ChooseTopicProps> = () => {
+const ChooseTopicScreen: React.FC<ChooseTopicProps> = ({ navigation }) => {
   const { theme } = useTheme();
-  // (FIX) Mengganti 'signIn' dengan 'completeOnboarding'
-  const { completeOnboarding } = useAuth();
 
   // (FIX) State untuk API
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -33,7 +30,7 @@ const ChooseTopicScreen: React.FC<ChooseTopicProps> = () => {
         setError(null);
         const data = await fetchTopicsData();
         setTopics(data.topics);
-      } catch (e: any) { // (FIX) Memberi tipe 'any' pada 'e'
+      } catch (e: any) {
         setError(e.message || 'Gagal memuat topik');
         console.error(e);
       } finally {
@@ -46,8 +43,8 @@ const ChooseTopicScreen: React.FC<ChooseTopicProps> = () => {
 
   const onTopicPress = (title: string) => {
     console.log('Topic selected:', title);
-    // (FIX) Panggil 'completeOnboarding'
-    completeOnboarding();
+    // Navigasi setelah memilih topik - user sudah terautentikasi
+    // RootNavigator akan otomatis menampilkan AppNavigator
   };
 
   // (FIX) Menampilkan loading indicator

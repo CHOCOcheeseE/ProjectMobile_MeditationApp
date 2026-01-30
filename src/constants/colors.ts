@@ -1,8 +1,12 @@
-import { StatusBarStyle } from 'react-native'; // (FIX) Impor tipe ini
+import { StatusBarStyle } from 'react-native';
 
-// (Poin 7) Definisikan TIPE-nya dulu secara eksplisit
+// Definisi tipe untuk ColorPalette dengan properti tambahan untuk gradient dan accent
 export type ColorPalette = {
   primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  accent: string;
+  accentLight: string;
   white: string;
   black: string;
   darkGrey: string;
@@ -13,45 +17,90 @@ export type ColorPalette = {
   text: string;
   textSecondary: string;
   cardBackground: string;
+  card: string;
+  cardBorder: string;
   tabActive: string;
   tabInactive: string;
-  statusBar: StatusBarStyle; // (FIX) Tipe yang benar, bukan 'string'
+  statusBar: StatusBarStyle;
+  // Gradient colors untuk UI premium
+  gradientStart: string;
+  gradientEnd: string;
+  gradientAccent: string;
+  // Overlay dan shadow
+  overlay: string;
+  shadowColor: string;
+  // Success, warning, error
+  success: string;
+  warning: string;
+  error: string;
 };
 
-// (Poin 2) Tema untuk Mode Terang (Light Mode)
-// Sekarang kita paksakan tipenya di sini
+// Tema untuk Mode Terang (Light Mode) - Premium & Modern
 export const lightColors: ColorPalette = {
-  primary: '#8E97FD',
+  primary: '#7C83ED',
+  primaryLight: '#A5ABFF',
+  primaryDark: '#5A60C4',
+  accent: '#FF8B8B',
+  accentLight: '#FFB5B5',
   white: '#FFFFFF',
   black: '#000000',
-  darkGrey: '#3F414E',
-  lightGrey: '#A1A4B2',
-  socialBlue: '#7583CA',
-  lightPurple: '#F5F5F9',
-  background: '#FFFFFF',
-  text: '#3F414E',
-  textSecondary: '#A1A4B2',
-  cardBackground: '#F5F5F9',
-  tabActive: '#8E97FD',
-  tabInactive: '#A1A4B2',
-  statusBar: 'dark-content', // <-- Ini sekarang valid
+  darkGrey: '#2D3142',
+  lightGrey: '#9097A7',
+  socialBlue: '#5B7FFF',
+  lightPurple: '#F8F9FF',
+  background: '#FAFBFF',
+  text: '#2D3142',
+  textSecondary: '#7B8399',
+  cardBackground: '#FFFFFF',
+  card: '#FFFFFF',
+  cardBorder: 'rgba(124, 131, 237, 0.1)',
+  tabActive: '#7C83ED',
+  tabInactive: '#B8BDD1',
+  statusBar: 'dark-content',
+  // Gradient premium
+  gradientStart: '#7C83ED',
+  gradientEnd: '#A5ABFF',
+  gradientAccent: '#FF8B8B',
+  // Overlay
+  overlay: 'rgba(45, 49, 66, 0.5)',
+  shadowColor: 'rgba(124, 131, 237, 0.25)',
+  // Status
+  success: '#4CAF93',
+  warning: '#FFB347',
+  error: '#FF7070',
 };
 
-// (Poin 2 & 8) Tema untuk Mode Gelap (Dark Mode)
-// Paksakan tipenya di sini juga
+// Tema untuk Mode Gelap (Dark Mode) - Premium Night
 export const darkColors: ColorPalette = {
-  primary: '#8E97FD',
+  primary: '#8B93FF',
+  primaryLight: '#B5BCFF',
+  primaryDark: '#6B72D6',
+  accent: '#FF9B9B',
+  accentLight: '#FFC5C5',
   white: '#FFFFFF',
   black: '#000000',
   darkGrey: '#3F414E',
-  lightGrey: '#A1A4B2',
-  socialBlue: '#7583CA',
-  lightPurple: '#F5F5F9',
-  background: '#03174C', // Warna biru tua dari Figma
-  text: '#E6E7F2', // Warna teks terang
-  textSecondary: '#98A1BD', // Warna teks abu-abu terang
-  cardBackground: '#0A2057', // Warna kartu yang sedikit lebih terang
-  tabActive: '#E6E7F2',
-  tabInactive: 'rgba(230, 231, 242, 0.5)', // Opacity 50%
-  statusBar: 'light-content', // <-- Ini sekarang valid
+  lightGrey: '#8E92A3',
+  socialBlue: '#7B9FFF',
+  lightPurple: '#252A4A',
+  background: '#0D1B3D',
+  text: '#F0F2FA',
+  textSecondary: '#A8B0C5',
+  cardBackground: '#162347',
+  card: '#1A2850',
+  cardBorder: 'rgba(139, 147, 255, 0.15)',
+  tabActive: '#8B93FF',
+  tabInactive: 'rgba(248, 249, 255, 0.4)',
+  statusBar: 'light-content',
+  // Gradient premium night
+  gradientStart: '#1A2850',
+  gradientEnd: '#0D1B3D',
+  gradientAccent: '#8B93FF',
+  // Overlay
+  overlay: 'rgba(13, 27, 61, 0.8)',
+  shadowColor: 'rgba(0, 0, 0, 0.4)',
+  // Status
+  success: '#5CDB95',
+  warning: '#FFD166',
+  error: '#FF6B6B',
 };

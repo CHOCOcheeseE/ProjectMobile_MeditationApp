@@ -1,68 +1,141 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
-  TouchableOpacity,
+  View,
   Text,
   StyleSheet,
-  ImageBackground,
+  Image,
+  TouchableOpacity,
   ImageSourcePropType,
-  Dimensions,
-  View,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withDelay,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { useTheme } from '../../context/ThemeContext';
 import { METRICS } from '../../constants/metrics';
-import { useTheme } from '../../context/ThemeContext'; // (Poin 4)
 
-// (Poin 7) Tipe untuk props
-type Props = {
+interface MeditationCardProps {
   title: string;
-  imageSource: ImageSourcePropType;
+  imageSource: ImageSourcePropType | { uri: string };
   onPress: () => void;
-};
+  index?: number;
+}
 
-const { width } = Dimensions.get('window');
-// (lebar layar - (padding horizontal * 2) - (jarak antar kartu)) / 2
-const cardWidth = (width - METRICS.padding * 2 - METRICS.margin) / 2;
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-const MeditationCard: React.FC<Props> = ({
+const MeditationCard: React.FC<MeditationCardProps> = ({
   title,
   imageSource,
   onPress,
+  index = 0,
 }) => {
-  const { theme } = useTheme(); // (Poin 4)
+  const { theme } = useTheme();
+
+  // Animasi nilai
+  const animationProgress = useSharedValue(0);
+
+  useEffect(() => {
+    const delay = index * 80;
+    animationProgress.value = withDelay(
+      delay,
+      withSpring(1, { damping: 14, stiffness: 85 })
+    );
+  }, [index]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      animationProgress.value,
+      [0, 1],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          animationProgress.value,
+          [0, 1],
+          [25, 0],
+          Extrapolation.CLAMP
+        ),
+      },
+      {
+        scale: interpolate(
+          animationProgress.value,
+          [0, 1],
+          [0.92, 1],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
-      <ImageBackground
-        source={imageSource}
-        style={styles.image}
-        imageStyle={styles.imageStyle}>
-        <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-        </View>
-      </ImageBackground>
-    </TouchableOpacity>
+    <AnimatedTouchable
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.cardBorder,
+          shadowColor: theme.shadowColor,
+        },
+        animatedStyle,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={styles.imageContainer}>
+        <Image source={imageSource} style={styles.image} resizeMode="cover" />
+        <View style={styles.imageOverlay} />
+      </View>
+      <View style={styles.textContainer}>
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>
+          {title}
+        </Text>
+      </View>
+    </AnimatedTouchable>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    width: cardWidth,
-    height: cardWidth * 1.2, // Buat kartu sedikit lebih tinggi dari lebarnya
+    width: '48%',
     marginBottom: METRICS.margin,
+    borderRadius: METRICS.radius + 4,
+    overflow: 'hidden',
+    borderWidth: 1,
+    // Shadow premium
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  imageContainer: {
+    height: 140,
+    width: '100%',
+    backgroundColor: '#E8E8F0',
   },
   image: {
     width: '100%',
     height: '100%',
-    justifyContent: 'flex-end', // Dorong teks ke bawah
   },
-  imageStyle: {
-    borderRadius: METRICS.radius,
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
   },
   textContainer: {
-    padding: METRICS.padding / 1.5,
+    padding: 14,
+    justifyContent: 'center',
+    minHeight: 65,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
+    letterSpacing: 0.2,
   },
 });
 

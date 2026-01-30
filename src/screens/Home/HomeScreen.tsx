@@ -1,28 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  ScrollView, // (FIX) Impor ScrollView
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
-// (FIX) Impor SafeAreaView dari context
 import { SafeAreaView } from 'react-native-safe-area-context';
-// Impor tipe
 import { HomeStackScreenProps } from '../../navigation/types';
 import { Course, PlayerTopic } from '../../data/MockData';
-// Impor hook dan context
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-// Impor API
 import { fetchHomeData, HomeDataResponse } from '../../services/api';
-// Impor komponen
 import { METRICS } from '../../constants/metrics';
 import CourseCard from '../../components/features/CourseCard';
 import PlayerCard from '../../components/features/PlayerCard';
+import { useResponsive } from '../../hooks/useResponsive';
 
-// Tipe untuk state data
 type HomeDataState = {
   courses: Course[];
   dailyThought: PlayerTopic;
@@ -32,37 +28,41 @@ type HomeDataState = {
 const HomeScreen: React.FC<HomeStackScreenProps<'HomeList'>> = ({
   navigation,
 }) => {
-  const { signOut } = useAuth();
+  const { user } = useAuth(); // Ambil data user dari Auth Context
   const { theme } = useTheme();
 
-  // State untuk API data
   const [homeData, setHomeData] = useState<HomeDataState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data: HomeDataResponse = await fetchHomeData(); // Panggil API
-        setHomeData({
-          courses: data.courses,
-          dailyThought: data.dailyThought,
-          recommended: data.recommended,
-        });
-      } catch (e: any) {
-        setError(e.message || 'Gagal memuat data');
-        console.error(e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
+  const loadData = useCallback(async () => {
+    try {
+      setError(null);
+      const data: HomeDataResponse = await fetchHomeData();
+      setHomeData({
+        courses: data.courses,
+        dailyThought: data.dailyThought,
+        recommended: data.recommended,
+      });
+    } catch (e: any) {
+      setError(e.message || 'Gagal memuat data');
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  // Fungsi navigasi
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
   const onCoursePress = (item: Course) => {
     navigation.navigate('Player', {
       title: item.title,
@@ -79,7 +79,79 @@ const HomeScreen: React.FC<HomeStackScreenProps<'HomeList'>> = ({
     });
   };
 
-  // Tampilan Loading
+  // Optimize with useResponsive
+  const { isSmallDevice, spacing, fontSize } = useResponsive();
+
+  // renderItem untuk FlatList Utama (Courses)
+  const renderCourseItem = useCallback(({ item, index }: { item: Course; index: number }) => (
+    <View style={{ flex: 1, paddingHorizontal: spacing.xs, marginBottom: spacing.md }}>
+      <CourseCard
+        item={item}
+        onPress={() => onCoursePress(item)}
+        index={index}
+      />
+    </View>
+  ), [spacing, onCoursePress]);
+
+  // Header Component (User Greeting)
+  const renderHeader = useCallback(() => (
+    <View>
+      <Text style={[styles.title, { color: theme.text, marginTop: spacing.lg }]}>
+        Good Morning, {user?.email ? user.email.split('@')[0] : 'Guest'}
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.textSecondary, marginBottom: spacing.md }]}>
+        We Wish you have a good day
+      </Text>
+      {/* Separator / Title for Courses if needed */}
+    </View>
+  ), [theme, user, spacing]);
+
+  // Footer Component (Daily Thought & Recommended)
+  const renderFooter = useCallback(() => {
+    if (!homeData) return null;
+
+    return (
+      <View style={{ paddingBottom: spacing.xl }}>
+        {/* Daily Thought Section */}
+        <View style={[styles.playerCardContainer, { marginTop: spacing.sm }]}>
+          <PlayerCard
+            title={homeData.dailyThought.title}
+            subtitle={homeData.dailyThought.subtitle}
+            imageSource={homeData.dailyThought.image}
+            onPress={() => onPlayerPress(homeData.dailyThought)}
+            delay={200}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, {
+          color: theme.text,
+          marginTop: spacing.lg,
+          marginBottom: spacing.md
+        }]}>
+          Recommended for you
+        </Text>
+
+        {/* Horizontal List for Recommended - Nested FlatList is OK here */}
+        <FlatList
+          data={homeData.recommended}
+          keyExtractor={item => item.id}
+          renderItem={({ item, index }) => (
+            <CourseCard
+              item={item}
+              onPress={() => onCoursePress(item)}
+              isRecommended
+              index={index}
+            />
+          )}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.recommendList}
+          initialNumToRender={3}
+        />
+      </View>
+    );
+  }, [homeData, theme, spacing, onPlayerPress, onCoursePress]);
+
   if (isLoading) {
     return (
       <SafeAreaView
@@ -91,94 +163,36 @@ const HomeScreen: React.FC<HomeStackScreenProps<'HomeList'>> = ({
     );
   }
 
-  // Tampilan Error
-  if (error) {
-    return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: theme.background }]}>
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Fallback UI jika data kosong
+  if (!homeData) return null;
 
-  // Tampilan Sukses (tapi data null)
-  if (!homeData) {
-    return null;
-  }
-
-  // (FIX) Menggunakan ScrollView sebagai pembungkus utama
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={[styles.title, { color: theme.text }]}>
-          Good Morning, Afsar
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          We Wish you have a good day
-        </Text>
-
-        <View style={styles.courseRow}>
-          <CourseCard
-            item={homeData.courses[0]}
-            onPress={() => onCoursePress(homeData.courses[0])}
-          />
-          <CourseCard
-            item={homeData.courses[1]}
-            onPress={() => onCoursePress(homeData.courses[1])}
-          />
-        </View>
-
-        <View style={styles.playerCardContainer}>
-          <PlayerCard
-            title={homeData.dailyThought.title}
-            subtitle={homeData.dailyThought.subtitle}
-            imageSource={homeData.dailyThought.image}
-            onPress={() => onPlayerPress(homeData.dailyThought)}
-          />
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          Recomended for you
-        </Text>
-        
-        {/* (FIX) FlatList horizontal sekarang ada di dalam ScrollView */}
-        <FlatList
-          data={homeData.recommended} // Data untuk daftar horizontal
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <CourseCard
-              item={item}
-              onPress={() => onCoursePress(item)}
-              isRecommended
-            />
-          )}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.recommendList}
-        />
-      </ScrollView>
+      {/* 
+        OPTIMIZATION: Menggunakan FlatList sebagai container utama 
+        menggantikan ScrollView untuk performa yang lebih baik.
+      */}
+      <FlatList
+        data={homeData.courses}
+        keyExtractor={(item) => item.id}
+        renderItem={renderCourseItem}
+        numColumns={2} // Grid Layout
+        columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: METRICS.padding }}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+        }
+        contentContainerStyle={{ flexGrow: 1 }}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: METRICS.padding,
-  },
-  errorText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: 'red',
-  },
+  safeArea: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -195,9 +209,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: METRICS.padding,
   },
-  // (FIX) Menambahkan padding horizontal untuk PlayerCard
   playerCardContainer: {
     paddingHorizontal: METRICS.padding,
+    marginTop: METRICS.margin,
   },
   sectionTitle: {
     fontSize: 24,
@@ -208,7 +222,7 @@ const styles = StyleSheet.create({
   },
   recommendList: {
     paddingLeft: METRICS.padding,
-    paddingRight: METRICS.padding - METRICS.margin / 1.5, // Agar padding kanan pas
+    paddingRight: METRICS.padding - METRICS.margin / 1.5,
   },
 });
 

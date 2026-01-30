@@ -1,111 +1,174 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  Image,
   TouchableOpacity,
-  ImageBackground,
   ImageSourcePropType,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withDelay,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { useTheme } from '../../context/ThemeContext';
 import { METRICS } from '../../constants/metrics';
-import { useTheme } from '../../context/ThemeContext'; // (Poin 4)
-// (FIX) Menggunakan @expo/vector-icons dan alias 'as Icon'
-import { Ionicons as Icon } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-type Props = {
+interface PlayerCardProps {
   title: string;
   subtitle: string;
-  imageSource: ImageSourcePropType;
+  imageSource: ImageSourcePropType | { uri: string };
   onPress: () => void;
-  showPlayButton?: boolean;
-  startButton?: boolean;
-};
+  delay?: number;
+}
 
-const PlayerCard: React.FC<Props> = ({
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+const PlayerCard: React.FC<PlayerCardProps> = ({
   title,
   subtitle,
   imageSource,
   onPress,
-  showPlayButton = true, // Default true untuk Daily Thought
-  startButton = false, // Default false
+  delay = 150,
 }) => {
-  const { theme } = useTheme(); // (Poin 4)
+  const { theme } = useTheme();
+
+  // Animasi nilai
+  const animationProgress = useSharedValue(0);
+
+  useEffect(() => {
+    animationProgress.value = withDelay(
+      delay,
+      withSpring(1, { damping: 14, stiffness: 80 })
+    );
+  }, [delay]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      animationProgress.value,
+      [0, 1],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          animationProgress.value,
+          [0, 1],
+          [20, 0],
+          Extrapolation.CLAMP
+        ),
+      },
+      {
+        scale: interpolate(
+          animationProgress.value,
+          [0, 1],
+          [0.96, 1],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
 
   return (
-    <TouchableOpacity onPress={onPress}>
-      <ImageBackground
-        source={imageSource}
-        style={[styles.container, { backgroundColor: theme.cardBackground }]}
-        imageStyle={styles.image}>
-        <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            {subtitle}
-          </Text>
-        </View>
+    <AnimatedTouchable
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.card,
+          shadowColor: theme.shadowColor,
+        },
+        animatedStyle,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
+      <View style={styles.imageWrapper}>
+        <Image source={imageSource} style={styles.image} resizeMode="cover" />
+        <View style={styles.gradientOverlay} />
+      </View>
 
-        {/* (Poin 3) Tampilkan tombol play atau start */}
-        {showPlayButton && (
-          <TouchableOpacity
-            style={[styles.playButton, { backgroundColor: theme.white }]}>
-            <Icon name="play" size={20} color={theme.darkGrey} />
-          </TouchableOpacity>
-        )}
-        {startButton && (
-          <TouchableOpacity
-            style={[styles.startButton, { backgroundColor: theme.white }]}>
-            <Text style={[styles.startButtonText, { color: theme.darkGrey }]}>
-              START
-            </Text>
-          </TouchableOpacity>
-        )}
-      </ImageBackground>
-    </TouchableOpacity>
+      <View style={styles.contentOverlay}>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+        <View style={[styles.playButton, { backgroundColor: theme.primary }]}>
+          <Ionicons name="play" size={18} color="#fff" />
+        </View>
+      </View>
+    </AnimatedTouchable>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    height: 110,
-    borderRadius: METRICS.radius,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: METRICS.padding,
+    height: 100,
+    borderRadius: METRICS.radius + 4,
     overflow: 'hidden',
-    marginTop: METRICS.margin,
+    position: 'relative',
+    // Shadow premium
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  imageWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#333',
   },
   image: {
-    opacity: 0.5, // Sedikit redupkan gambar latar
+    width: '100%',
+    height: '100%',
+  },
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  contentOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: METRICS.padding + 4,
   },
   textContainer: {
-    flex: 1, // Agar teks mengambil ruang
-    marginRight: METRICS.margin,
+    flex: 1,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 6,
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    color: 'rgba(255, 255, 255, 0.9)',
     textTransform: 'uppercase',
   },
   playButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
-  },
-  startButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  startButtonText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    alignItems: 'center',
+    marginLeft: 16,
+    // Glow effect
+    shadowColor: '#7C83ED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });
 
