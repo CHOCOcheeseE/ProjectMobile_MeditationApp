@@ -1,17 +1,9 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail,
-  updateProfile,
-  signInWithCredential,
-  GoogleAuthProvider,
-  User,
-  Auth
-} from 'firebase/auth';
-import { auth } from '../services/firebase';
+import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import { User } from 'firebase/auth'; // Type definitions can still be imported from main package or compat/auth
+
+import { getFirebaseAuth } from '../services/firebase';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -41,6 +33,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Lazy init auth
+  const auth = useMemo(() => {
+    try {
+      return getFirebaseAuth();
+    } catch (e) {
+      console.error("Failed to get Auth instance in Context:", e);
+      return null;
+    }
+  }, []);
+
+  // Google SignIn using Expo Auth Session
   // Google Auth Request
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '574087940750-g1bu4ngcfdvohce9inpq0gjaighmvfdu.apps.googleusercontent.com',
@@ -54,28 +57,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (usr: User | null) => {
+    // Compat API uses onAuthStateChanged as a method on the auth object
+    const unsubscribe = auth.onAuthStateChanged((usr: any) => {
       setUser(usr);
       setIsLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [auth]);
 
   // Handle Google Sign-In Response
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
+      const credential = firebase.auth.GoogleAuthProvider.credential(id_token);
       if (auth) {
         setIsLoading(true);
-        signInWithCredential(auth, credential)
+        // Compat API: auth.signInWithCredential(credential)
+        auth.signInWithCredential(credential)
           .catch((e: any) => setError(e.message))
           .finally(() => setIsLoading(false));
       }
     } else if (response?.type === 'error') {
       setError("Google Sign-In failed or was cancelled.");
     }
-  }, [response]);
+  }, [response, auth]);
 
   const clearError = () => {
     setError(null);
@@ -101,7 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      // Compat API: auth.signInWithEmailAndPassword
+      await auth.signInWithEmailAndPassword(email, pass);
     } catch (e: any) {
       const errorMessage = getAuthErrorMessage(e.code);
       setError(errorMessage);
@@ -117,9 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      // Compat API: auth.createUserWithEmailAndPassword
+      const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
       const newUser = userCredential.user;
-      await updateProfile(newUser, { displayName: name });
+      if (newUser) {
+        await newUser.updateProfile({ displayName: name });
+      }
       return true;
     } catch (e: any) {
       const errorMessage = getAuthErrorMessage(e.code);
@@ -136,7 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
     setError(null);
     try {
-      await sendPasswordResetEmail(auth, email);
+      // Compat API: auth.sendPasswordResetEmail
+      await auth.sendPasswordResetEmail(email);
       return true;
     } catch (e: any) {
       const errorMessage = getAuthErrorMessage(e.code);
@@ -151,7 +161,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signOut = async () => {
     if (!auth) return;
     setError(null);
-    await firebaseSignOut(auth);
+    // Compat API: auth.signOut()
+    await auth.signOut();
   };
 
   return (

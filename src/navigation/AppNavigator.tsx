@@ -27,6 +27,8 @@ import MeditateScreen from '../screens/Meditate/MeditateScreen';
 import MusicScreen from '../screens/Music/MusicScreen';
 import PlayerScreen from '../screens/detail/PlayerScreen';
 import TutorialScreen from '../screens/detail/TutorialScreen';
+import ProfileScreen from '../screens/Profile/ProfileScreen';
+import ChatScreen from '../screens/Chat/ChatScreen';
 
 import { useTheme } from '../context/ThemeContext';
 
@@ -45,6 +47,8 @@ const HomeStack = () => (
     <HomeStackNav.Screen name="HomeList" component={HomeScreen} />
     <HomeStackNav.Screen name="Player" component={PlayerScreen} />
     <HomeStackNav.Screen name="Tutorial" component={TutorialScreen} />
+    <HomeStackNav.Screen name="Profile" component={ProfileScreen} />
+    <HomeStackNav.Screen name="Chat" component={ChatScreen} />
   </HomeStackNav.Navigator>
 );
 

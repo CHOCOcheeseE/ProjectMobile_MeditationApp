@@ -33,8 +33,10 @@ export type AuthStackParamList = {
 export type HomeStackParamList = {
   HomeList: undefined;
   Player: PlayerScreenParams;
-  Tutorial: TutorialScreenParams; // (BARU)
-};
+  Tutorial: TutorialScreenParams;
+  Profile: undefined;
+  Chat: undefined; // Add Chat route
+}; // (BARU)
 
 export type SleepStackParamList = {
   SleepList: undefined;

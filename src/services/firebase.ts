@@ -1,11 +1,9 @@
-/**
- * Firebase Configuration
- * ----------------------
- */
-import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-// @ts-ignore
-import { initializeAuth, getReactNativePersistence, getAuth, Auth } from 'firebase/auth';
+// Fallback to Compat API which is often more stable in mixed environments
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore'; // Import Firestore
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 
 const firebaseConfig = {
     apiKey: "AIzaSyAGlAdxnnZ_d0cehFMhexaXQQeYIFk4DZU",
@@ -17,34 +15,45 @@ const firebaseConfig = {
     measurementId: "G-BS1TZQEXWL"
 };
 
-let app: FirebaseApp;
-let auth: Auth;
+let app: firebase.app.App;
+let auth: firebase.auth.Auth; // Compat Auth type
+let db: firebase.firestore.Firestore;
 
-if (getApps().length === 0) {
-    try {
-        app = initializeApp(firebaseConfig);
-        // Initialize Auth with React Native persistence explicitly
-        auth = initializeAuth(app, {
-            persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-        });
-    } catch (e) {
-        console.error("Firebase initialization failed:", e);
-        // Fallback if needed but initialization usually works here
-        // In case initializeAuth fails, try getAuth as backup
-        if (!auth) auth = getAuth(app!);
+try {
+    if (!firebase.apps.length) {
+        app = firebase.initializeApp(firebaseConfig);
+        console.log("Firebase Compat App initialized");
+    } else {
+        app = firebase.app();
+        console.log("Firebase Compat App retrieved");
     }
-} else {
-    app = getApp();
-    // On hot reload, auth persistence might need re-initialization or simply retrieval
-    try {
-        auth = initializeAuth(app, {
-            persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-        });
-    } catch (e: any) {
-        // If auth instance already exists (common in hot reload), just retrieve it
-        // Using require to avoid top-level getAuth if possible
-        auth = getAuth(app);
-    }
+
+    // Initialize Auth with persistence using Compat API
+    // The compat API typically handles side-effects/registration internally better
+    auth = firebase.auth();
+    // Verify persistence (optional, compat usually defaults to local in RN if installed)
+    console.log("Firebase Compat Auth initialized");
+
+    // Initialize Firestore for User Progress/Stats
+    db = firebase.firestore();
+    console.log("Firebase Compat Firestore initialized");
+
+    // Initialize Storage (if needed for profile pics etc)
+    // storage = firebase.storage();
+
+
+} catch (e: any) {
+    console.error("Firebase Compat Init Error:", e);
+    setTimeout(() => {
+        Alert.alert("Firebase Error", e.message);
+    }, 1000);
 }
 
-export { app, auth, firebaseConfig };
+// Wrapper to match previous getFirebaseAuth interface, or we can just export auth
+// The previous code expected a Modular Auth instance, but Compat Auth is slightly different.
+// However, most methods (signInWith...) are compatible if we import from compat/auth in Context.
+// Wrapped getters/exports
+export const getFirebaseAuth = () => auth;
+export const getFirestore = () => db;
+
+export { app, db, auth, firebaseConfig };

@@ -7,8 +7,10 @@ import {
   ActivityIndicator,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { HomeStackScreenProps } from '../../navigation/types';
 import { Course, PlayerTopic } from '../../data/MockData';
 import { useTheme } from '../../context/ThemeContext';
@@ -94,17 +96,24 @@ const HomeScreen: React.FC<HomeStackScreenProps<'HomeList'>> = ({
   ), [spacing, onCoursePress]);
 
   // Header Component (User Greeting)
+  // Header Component (User Greeting)
   const renderHeader = useCallback(() => (
-    <View>
-      <Text style={[styles.title, { color: theme.text, marginTop: spacing.lg }]}>
-        Good Morning, {user?.email ? user.email.split('@')[0] : 'Guest'}
-      </Text>
-      <Text style={[styles.subtitle, { color: theme.textSecondary, marginBottom: spacing.md }]}>
-        We Wish you have a good day
-      </Text>
-      {/* Separator / Title for Courses if needed */}
+    <View style={styles.headerContainer}>
+      <View>
+        <Text style={[styles.title, { color: theme.text, marginTop: 0, paddingHorizontal: 0 }]}>
+          Good Morning, {user?.displayName || (user?.email ? user.email.split('@')[0] : 'Guest')}
+        </Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary, paddingHorizontal: 0 }]}>
+          We Wish you have a good day
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileButton}>
+          <Ionicons name="person-circle-outline" size={40} color={theme.text} />
+        </TouchableOpacity>
+      </View>
     </View>
-  ), [theme, user, spacing]);
+  ), [theme, user, navigation]);
 
   // Footer Component (Daily Thought & Recommended)
   const renderFooter = useCallback(() => {
@@ -186,6 +195,14 @@ const HomeScreen: React.FC<HomeStackScreenProps<'HomeList'>> = ({
         }
         contentContainerStyle={{ flexGrow: 1 }}
       />
+      {/* Floating Action Button (FAB) for Chat */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('Chat')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -193,6 +210,24 @@ const HomeScreen: React.FC<HomeStackScreenProps<'HomeList'>> = ({
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  // ... (existing styles)
+  fab: {
+    position: 'absolute',
+    bottom: METRICS.margin * 2,
+    right: METRICS.margin,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#8E97FD', // Primary Blue
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    zIndex: 999,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -223,6 +258,19 @@ const styles = StyleSheet.create({
   recommendList: {
     paddingLeft: METRICS.padding,
     paddingRight: METRICS.padding - METRICS.margin / 1.5,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingRight: METRICS.padding,
+    paddingLeft: METRICS.padding,
+    paddingTop: METRICS.padding,
+    paddingBottom: METRICS.margin,
+    backgroundColor: 'transparent',
+  },
+  profileButton: {
+    marginTop: 10,
   },
 });
 

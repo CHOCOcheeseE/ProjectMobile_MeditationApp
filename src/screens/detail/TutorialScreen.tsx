@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
@@ -60,15 +61,47 @@ const TutorialScreen: React.FC<Props> = ({ navigation, route }) => {
 
         {/* Konten Teks */}
         <ScrollView
-          style={styles.contentContainer}
-          showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            {subtitle.toUpperCase()}
-          </Text>
-          <Text style={[styles.description, { color: theme.text }]}>
-            {description}
-          </Text>
+          style={[styles.contentContainer, { backgroundColor: theme.background }]}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          <View style={styles.titleContainer}>
+            <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              {subtitle.toUpperCase()}
+            </Text>
+          </View>
+
+          {/* Separator */}
+          <View style={[styles.separator, { backgroundColor: theme.textSecondary }]} />
+
+          {/* Render Description as Steps if detected, else plain text */}
+          {description.includes('1.') ? (
+            <View style={styles.stepsContainer}>
+              {/* Intro Text (before '1.') */}
+              {description.split('1.')[0].trim().length > 0 && (
+                <Text style={[styles.introText, { color: theme.text }]}>
+                  {description.split('1.')[0].trim()}
+                </Text>
+              )}
+
+              {/* Steps */}
+              {description.split(/\d+\.\s+/).slice(1).map((step, index) => (
+                <View key={index} style={[styles.stepCard, { backgroundColor: theme.card }]}>
+                  <View style={[styles.stepNumber, { backgroundColor: theme.primary }]}>
+                    <Text style={styles.stepNumberText}>{index + 1}</Text>
+                  </View>
+                  <Text style={[styles.stepText, { color: theme.text }]}>
+                    {step.trim()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={[styles.description, { color: theme.text }]}>
+              {description}
+            </Text>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -84,7 +117,7 @@ const styles = StyleSheet.create({
   },
   imageBackground: {
     width: '100%',
-    height: METRICS.screenHeight * 0.4,
+    height: METRICS.screenHeight * 0.35, // Slightly shorter
     justifyContent: 'space-between',
   },
   header: {
@@ -92,41 +125,92 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: METRICS.padding,
-    paddingTop: METRICS.margin, // Padding untuk status bar
+    paddingTop: METRICS.margin,
   },
   headerIcons: {
     flexDirection: 'row',
   },
   iconButton: {
     padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Darker background for visibility
     borderRadius: 20,
     marginHorizontal: 5,
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
-    marginTop: -20, // Tarik ke atas menutupi gambar
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    marginTop: -30, // Overlap effect
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     paddingHorizontal: METRICS.padding,
-    paddingTop: METRICS.margin,
-    // (FIX) Tambahkan background color dari theme agar menutupi gambar
+    paddingTop: 30,
+  },
+  titleContainer: {
+    marginBottom: 10,
   },
   title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 28,
+    fontWeight: '800', // Extra bold
+    marginBottom: 5,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-medium',
   },
   subtitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    opacity: 0.7,
+    letterSpacing: 1,
+  },
+  separator: {
+    height: 1,
+    opacity: 0.1,
+    width: '100%',
     marginBottom: 20,
   },
-  description: {
+  // New Styles for Rich Content
+  stepsContainer: {
+    gap: 15,
+  },
+  introText: {
     fontSize: 16,
     lineHeight: 24,
+    marginBottom: 20,
+    fontStyle: 'italic',
     opacity: 0.8,
+  },
+  stepCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 15,
+    borderRadius: 16,
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  stepNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+    marginTop: 2, // Align with first line of text
+  },
+  stepNumberText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+  },
+  description: {
+    fontSize: 17,
+    lineHeight: 28,
   },
 });
 

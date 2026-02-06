@@ -1,31 +1,98 @@
-// Kriteria 3 & 5: Layar detail untuk navigasi
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   View,
   Text,
   StyleSheet,
-  // (FIX) 'ImageSourcePropType' dihapus karena tidak terpakai
   ImageBackground,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { METRICS } from '../../constants/metrics';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-// (FIX) Mengganti tipe 'HomeStackParamList' ke 'MeditateStackParamList'
-// (Sebenarnya tidak masalah, karena 'Player' sama di semua stack)
 import { MeditateStackParamList } from '../../navigation/types';
+import { Audio } from 'expo-av';
 
-// Tipe props ini agak rumit karena bisa datang dari stack mana saja
-// Kita ambil satu saja sebagai contoh, 'Player' params-nya sama
 type Props = NativeStackScreenProps<MeditateStackParamList, 'Player'>;
 
 const PlayerScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme } = useTheme();
-  // (FIX) Ambil data dari route.params
-  const { title, subtitle, image } = route.params;
+  const { title, subtitle, image, trackUrl } = route.params;
+
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load Sound
+  useEffect(() => {
+    let soundObject: Audio.Sound | null = null;
+
+    const loadAudio = async () => {
+      if (!trackUrl) return;
+
+      setIsLoading(true);
+      try {
+        console.log('Loading Sound:', trackUrl);
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: trackUrl },
+          { shouldPlay: true }
+        );
+        soundObject = sound;
+        setSound(sound);
+        setIsPlaying(true);
+
+        // Handle finish
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setIsPlaying(false);
+            sound.setPositionAsync(0);
+          }
+        });
+
+      } catch (error) {
+        console.error('Error loading sound', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (trackUrl) {
+      loadAudio();
+    }
+
+    // Cleanup
+    return () => {
+      if (soundObject) {
+        console.log('Unloading Sound');
+        soundObject.unloadAsync();
+      }
+    };
+  }, [trackUrl]);
+
+  const togglePlayback = async () => {
+    if (!sound) return;
+
+    if (isPlaying) {
+      await sound.pauseAsync();
+      setIsPlaying(false);
+    } else {
+      await sound.playAsync();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSeek = async (seconds: number) => {
+    if (!sound) return;
+    const status = await sound.getStatusAsync();
+    if (status.isLoaded) {
+      let newPosition = status.positionMillis + (seconds * 1000);
+      if (newPosition < 0) newPosition = 0;
+      await sound.setPositionAsync(newPosition);
+    }
+  }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -33,7 +100,7 @@ const PlayerScreen: React.FC<Props> = ({ navigation, route }) => {
         source={image}
         style={styles.imageBackground}
         blurRadius={10}>
-        {/* Tombol back kustom */}
+        {/* Back Button */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -41,7 +108,7 @@ const PlayerScreen: React.FC<Props> = ({ navigation, route }) => {
         </TouchableOpacity>
 
         <View style={styles.contentContainer}>
-          {/* Gambar Album */}
+          {/* Album Art */}
           <View style={styles.imageContainer}>
             <Image
               source={image}
@@ -49,24 +116,52 @@ const PlayerScreen: React.FC<Props> = ({ navigation, route }) => {
               resizeMode="cover"
             />
           </View>
-          {/* (FIX) Menggunakan 'theme.text' untuk warna yang benar di Dark Mode */}
+
           <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             {subtitle}
           </Text>
         </View>
 
-        {/* Kontrol Player */}
+        {/* Player Controls */}
         <View style={styles.controlsContainer}>
-          {/* Kontrol Player (Tombol palsu) */}
-          <Icon name="shuffle" size={28} color={theme.textSecondary} />
-          <Icon name="play-skip-back" size={32} color={theme.text} />
-          <View style={[styles.playButton, { backgroundColor: theme.primary }]}>
-            <Icon name="play" size={40} color={theme.white} />
-          </View>
-          <Icon name="play-skip-forward" size={32} color={theme.text} />
-          <Icon name="repeat" size={28} color={theme.textSecondary} />
+          <TouchableOpacity onPress={() => console.log('Shuffle')}>
+            <Icon name="shuffle" size={28} color={theme.textSecondary} />
+          </TouchableOpacity>
+
+          {/* Rewind 10s */}
+          <TouchableOpacity onPress={() => handleSeek(-10)}>
+            <Icon name="play-skip-back" size={32} color={theme.text} />
+          </TouchableOpacity>
+
+          {/* Play/Pause Button */}
+          <TouchableOpacity
+            style={[styles.playButton, { backgroundColor: theme.primary }]}
+            onPress={togglePlayback}
+            disabled={isLoading || !trackUrl}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={theme.white} size="large" />
+            ) : (
+              <Icon name={isPlaying ? "pause" : "play"} size={40} color={theme.white} />
+            )}
+          </TouchableOpacity>
+
+          {/* Forward 10s */}
+          <TouchableOpacity onPress={() => handleSeek(10)}>
+            <Icon name="play-skip-forward" size={32} color={theme.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => console.log('Repeat')}>
+            <Icon name="repeat" size={28} color={theme.textSecondary} />
+          </TouchableOpacity>
         </View>
+
+        {!trackUrl && (
+          <Text style={{ textAlign: 'center', color: theme.textSecondary, marginBottom: 20 }}>
+            (Preview Only - No Audio URL)
+          </Text>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -79,7 +174,7 @@ const styles = StyleSheet.create({
   imageBackground: {
     flex: 1,
     paddingHorizontal: METRICS.padding,
-    paddingTop: METRICS.margin / 2, // Padding untuk tombol back
+    paddingTop: METRICS.margin / 2,
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -109,11 +204,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: 5,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginTop: 5,
   },
   controlsContainer: {
     flexDirection: 'row',
@@ -128,7 +223,12 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingLeft: 5, // Sesuaikan agar ikon play terlihat di tengah
+    paddingLeft: 3,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
 });
 
